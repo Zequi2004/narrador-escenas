@@ -56,7 +56,7 @@ Tu objetivo es transformar un diálogo en bruto en una escena literaria rica, vi
 
 2. PROHIBICIÓN ESTRICTA DE CLICHÉS SOMÁTICOS:
    - Queda PROHIBIDO usar frases gastadas como: "frunció el ceño", "tragó saliva", "suspiró pesadamente", "un escalofrío recorrió su espalda", "sus ojos se abrieron como platos", "apretó los puños", "se mordió el labio" o "el silencio se podía cortar con un cuchillo".
-   - En lugar de nombrar la emoción de forma genérica, muéstrala mediante acciones específicas con objetos del entorno (utilería) y microexpresiones involuntarias (ej. el pulgar raspando el borde de una taza desportillada, el retraso de un segundo antes de soltar el picaporte, la vista clavada en una mancha de grasa).
+   - En lugar de nombrar la emoción de forma genérica, muéstrala mediante acciones específicas con objetos del entorno (utilería) y microexpresiones involuntarias.
 
 3. RITMO Y CADENCIA ORGÁNICA:
    - No sobrecargues cada línea con un párrafo descriptivo.
@@ -64,7 +64,7 @@ Tu objetivo es transformar un diálogo en bruto en una escena literaria rica, vi
    - Inserta las pausas sensoriales y de acción física exactamente donde haya silencios lógicos, dudas, ocultamiento de información o cambios de poder en la conversación.
 
 4. PARÁMETROS TÉCNICOS DE LA ESCENA:
-   - Punto de vista (POV): {punto_de_vista}. Respeta rigurosamente las restricciones de percepción de esta focalización (no describas pensamientos internos de otros personajes si usas 1ª persona o 3ª persona limitada).
+   - Punto de vista (POV): {punto_de_vista}. Respeta rigurosamente las restricciones de percepción de esta focalización.
    - Nivel de detalle del entorno ({nivel_entorno}): {guia_entorno[nivel_entorno]}
    - Nivel de tensión física y corporal ({nivel_tension}): {guia_tension[nivel_tension]}
 """
@@ -99,6 +99,16 @@ def inicializar_estado():
         st.session_state.analisis_generado = None
 
 
+def obtener_api_key_servidor() -> str:
+    """Busca la API Key en st.secrets (Streamlit Cloud) o en variables de entorno."""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            return st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
+    return os.environ.get("GEMINI_API_KEY", "")
+
+
 def main():
     st.set_page_config(
         page_title="Enriquecedor de Escenas Literarias",
@@ -111,197 +121,28 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuración")
 
-   # 1. Gestión de API Key (Oculta si ya está en el servidor)
-    env_api_key = os.environ.get("GEMINI_API_KEY", "")
-    
-    if env_api_key:
-        api_key_input = env_api_key
-        st.success("🔒 API Key conectada de forma segura.")
-    else:
-        api_key_input = st.text_input(
-            "Gemini API Key",
-            type="password",
-            help="Ingresa tu clave de Google AI Studio."
-        )
+        # 1. Gestión de API Key (Oculta si ya está en el servidor)
+        env_api_key = obtener_api_key_servidor()
+        if env_api_key:
+            api_key_input = env_api_key
+            st.success("🔒 API Key conectada de forma segura.")
+        else:
+            api_key_input = st.text_input(
+                "Gemini API Key",
+                type="password",
+                help="Ingresa tu clave de Google AI Studio."
+            )
+
+        st.divider()
 
         # 2. Selector de Modelo
         modelo = st.selectbox(
             "Modelo de IA",
             options=[
-                "gemini-2.5-pro",
                 "gemini-2.5-flash",
+                "gemini-2.5-pro",
                 "gemini-1.5-pro",
                 "gemini-1.5-flash"
             ],
             index=0,
-            help="Los modelos 'pro' ofrecen mayor sutileza literaria y manejo de subtexto; los 'flash' son más rápidos."
-        )
-
-        st.divider()
-        st.subheader("🎛️ Parámetros Narrativos")
-
-        # 3. Sliders y Controles Literarios
-        nivel_entorno = st.select_slider(
-            "Nivel de detalle del entorno",
-            options=["Bajo", "Medio", "Alto"],
-            value="Medio"
-        )
-
-        nivel_tension = st.select_slider(
-            "Nivel de tensión física / corporal",
-            options=["Bajo", "Sutil", "Dramático"],
-            value="Sutil"
-        )
-
-        punto_de_vista = st.selectbox(
-            "Punto de vista (POV)",
-            options=[
-                "3ª persona limitada",
-                "3ª persona omnisciente",
-                "1ª persona"
-            ]
-        )
-
-        formato_dialogo = st.radio(
-            "Formato de diálogo de salida",
-            options=[
-                "Raya literaria tradicional en español (—)",
-                "Comillas anglosajonas (\" \")"
-            ],
-            index=0
-        )
-
-        temperatura = st.slider(
-            "Creatividad (Temperatura)",
-            min_value=0.1,
-            max_value=1.2,
-            value=0.75,
-            step=0.05,
-            help="Valores entre 0.6 y 0.85 logran el mejor balance entre riqueza léxica y coherencia."
-        )
-
-    # --- PANEL PRINCIPAL ---
-    st.title("🖋️ Estudio de Enriquecimiento de Escenas")
-    st.markdown(
-        "Transforma diálogos en bruto en prosa inmersiva con **anclaje sensorial**, **utilería** y **microexpresiones**, manteniendo intactas tus líneas originales."
-    )
-
-    col_contexto, col_dialogo = st.columns([1, 1.2], gap="large")
-
-    with col_contexto:
-        st.subheader("1. Contexto de la Escena")
-        entorno = st.text_input(
-            "Entorno / Ubicación",
-            placeholder="Ej. Taller mecánico de noche bajo lluvia intensa, olor a aceite quemado y tubo fluorescente parpadeando."
-        )
-        subtexto = st.text_input(
-            "Subtexto / Emoción subyacente",
-            placeholder="Ej. Tensión contenida, sospecha de traición; ambos fingen normalidad."
-        )
-        personajes = st.text_input(
-            "Personajes presentes (indica el focalizador si usas 1ª o 3ª limitada)",
-            placeholder="Ej. Clara (desconfiada, POV), Marcos (nervioso, limpiando piezas de un motor)."
-        )
-
-    with col_dialogo:
-        st.subheader("2. Diálogo en Bruto")
-        dialogo_bruto = st.text_area(
-            "Líneas de diálogo (Formato sugerido: Personaje: \"Línea\")",
-            height=210,
-            placeholder=(
-                'Clara: "Pensé que habías cerrado a las ocho."\n'
-                'Marcos: "El distribuidor de este sedán me dio más trabajo de la cuenta."\n'
-                'Clara: "Suena el teléfono de la oficina desde que entré. ¿No vas a atender?"\n'
-                'Marcos: "Es el contestador automático. Déjalo que salte."'
-            )
-        )
-
-    btn_generar = st.button("✨ Generar Escena Narrativa", type="primary", use_container_width=True)
-
-    # --- LÓGICA DE LLAMADA A LA API ---
-    if btn_generar:
-        if not api_key_input.strip():
-            st.error("⚠️ Debes ingresar una Gemini API Key válida en el panel lateral.")
-            st.stop()
-
-        if not all([entorno.strip(), subtexto.strip(), personajes.strip(), dialogo_bruto.strip()]):
-            st.warning("⚠️ Por favor, completa todos los campos de contexto y el diálogo en bruto antes de generar.")
-            st.stop()
-
-        with st.spinner("Orquestando puesta en escena, anclaje sensorial y subtexto..."):
-            try:
-                client = genai.Client(api_key=api_key_input.strip())
-
-                sys_prompt = construir_system_prompt(
-                    nivel_entorno=nivel_entorno,
-                    nivel_tension=nivel_tension,
-                    punto_de_vista=punto_de_vista,
-                    formato_dialogo=formato_dialogo
-                )
-                usr_prompt = construir_user_prompt(
-                    entorno=entorno,
-                    subtexto=subtexto,
-                    personajes=personajes,
-                    dialogo_bruto=dialogo_bruto
-                )
-
-                response = client.models.generate_content(
-                    model=modelo,
-                    contents=usr_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=sys_prompt,
-                        temperature=temperatura,
-                        response_mime_type="application/json",
-                        response_schema=ResultadoEscena,
-                    )
-                )
-
-                datos_respuesta = json.loads(response.text)
-                st.session_state.escena_generada = datos_respuesta.get("escena_narrada", "")
-                st.session_state.analisis_generado = datos_respuesta.get("analisis_subtexto", "")
-
-            except APIError as e:
-                st.error(f"❌ Error de la API de Gemini: {e}")
-            except Exception as e:
-                st.error(f"❌ Ocurrió un error inesperado al procesar la escena: {e}")
-
-    # --- SALIDA Y HERRAMIENTAS ---
-    if st.session_state.escena_generada:
-        st.divider()
-        st.subheader("📖 Resultado de la Escena")
-
-        tab_lectura, tab_copiar = st.tabs(["Vista Editorial", "Copiar al Portapapeles (Texto Plano)"])
-
-        with tab_lectura:
-            st.markdown(st.session_state.escena_generada)
-
-        with tab_copiar:
-            st.caption("Haz clic en el ícono de la esquina superior derecha del recuadro para copiar todo el texto con un clic:")
-            st.code(st.session_state.escena_generada, language="markdown")
-
-        # Botones de descarga (.md y .txt)
-        col_dl_md, col_dl_txt, _ = st.columns([1, 1, 2])
-        with col_dl_md:
-            st.download_button(
-                label="⬇️ Descargar como .MD",
-                data=st.session_state.escena_generada,
-                file_name="escena_enriquecida.md",
-                mime="text/markdown",
-                use_container_width=True
-            )
-        with col_dl_txt:
-            st.download_button(
-                label="⬇️ Descargar como .TXT",
-                data=st.session_state.escena_generada,
-                file_name="escena_enriquecida.txt",
-                mime="text/plain",
-                use_container_width=True
-            )
-
-        # Acordeón desplegable con el análisis técnico
-        with st.expander("🔍 Análisis de Decisiones: Lenguaje Corporal, Utilería y Subtexto", expanded=False):
-            st.markdown(st.session_state.analisis_generado)
-
-
-if __name__ == "__main__":
-    main()
+            help="Los modelos 'pro' ofrecen mayor sutileza literaria; los 'flash'
