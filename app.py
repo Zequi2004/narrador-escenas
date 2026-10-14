@@ -111,18 +111,18 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuración")
 
-        # 1. Gestión de API Key
-        env_api_key = os.environ.get("GEMINI_API_KEY", "")
+   # 1. Gestión de API Key (Oculta si ya está en el servidor)
+    env_api_key = os.environ.get("GEMINI_API_KEY", "")
+    
+    if env_api_key:
+        api_key_input = env_api_key
+        st.success("🔒 API Key conectada de forma segura.")
+    else:
         api_key_input = st.text_input(
             "Gemini API Key",
-            value=env_api_key,
             type="password",
-            help="Ingresa tu clave de Google AI Studio o configúrala en la variable de entorno GEMINI_API_KEY."
+            help="Ingresa tu clave de Google AI Studio."
         )
-        if env_api_key and api_key_input == env_api_key:
-            st.caption("✅ Cargada automáticamente desde `GEMINI_API_KEY`.")
-
-        st.divider()
 
         # 2. Selector de Modelo
         modelo = st.selectbox(
